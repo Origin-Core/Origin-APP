@@ -1,0 +1,67 @@
+name: Build Android App
+
+# Builds the Origin-Core mobile app into an installable .apk using
+# Capacitor + Gradle on GitHub's own runners (which have internet access
+# and a pre-installed Android SDK) — the android/ native project is
+# generated fresh on every run, so nothing bulky sits in the repo itself.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'www/**'
+      - 'package.json'
+      - 'capacitor.config.json'
+      - '.github/workflows/build-android-app.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to create a Release and upload the apk to it
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java (for Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync web assets into the native project
+        run: npx cap sync android
+
+      - name: Build debug .apk
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload .apk as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: origin-core-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create GitHub Release with the .apk attached
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-v${{ github.run_number }}
+          name: Origin-Core Mobile v${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
