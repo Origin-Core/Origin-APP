@@ -1,0 +1,9 @@
+{
+  "appId": "com.origincore.mobile",
+  "appName": "Origin-Core",
+  "webDir": "www",
+  "backgroundColor": "#06070F",
+  "android": {
+    "backgroundColor": "#06070F"
+  }
+}
